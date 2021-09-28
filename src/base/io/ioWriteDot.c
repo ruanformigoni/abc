@@ -18,6 +18,8 @@
 
 ***********************************************************************/
 
+#include <string.h>
+
 #include "ioAbc.h"
 #include "base/main/main.h"
 #include "map/mio/mio.h"
@@ -308,8 +310,33 @@ void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesSho
 //            fprintf( pFile, "  Node%d [label = \"%d\\n%s\"", pNode->Id, 
 //                SuppSize, 
 //                pSopString );
+//
+            char* objName = Abc_ObjName(pNode);
+            if( objName != NULL && strlen(objName) > 4 )
+            {
+                char* substr = (char*) malloc(5*sizeof(char));
 
-            fprintf( pFile, ", shape = ellipse" );
+                memcpy(substr, objName, 5*sizeof(char));
+
+                printf("--- objName: %s\n", objName);
+                printf("--- Substr: %s\n", substr);
+
+                if( ! strcmp(substr,"dummy") )
+                {
+                    fprintf( pFile, ", shape = box, fixedsize = true, width = .3, height = .3" );
+                } // if
+                else
+                {
+                    fprintf( pFile, ", shape = ellipse" );
+                } // else
+
+                free(substr);
+            }
+            else
+            {
+                fprintf( pFile, ", shape = ellipse" );
+            } // else
+
             if ( pNode->fMarkB )
                 fprintf( pFile, ", style = filled" );
             fprintf( pFile, "];\n" );
