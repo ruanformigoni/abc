@@ -318,9 +318,6 @@ void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesSho
 
                 memcpy(substr, objName, 5*sizeof(char));
 
-                printf("--- objName: %s\n", objName);
-                printf("--- Substr: %s\n", substr);
-
                 if( ! strcmp(substr,"dummy") )
                 {
                     fprintf( pFile, ", shape = box, fixedsize = true, width = .3, height = .3" );
