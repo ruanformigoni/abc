@@ -19,6 +19,7 @@
 ***********************************************************************/
 
 #include <string.h>
+#include <stdbool.h>
 
 #include "ioAbc.h"
 #include "base/main/main.h"
@@ -70,13 +71,63 @@ void Io_WriteDot( Abc_Ntk_t * pNtk, char * FileName )
   SeeAlso     []
 
 ***********************************************************************/
+char* get_prefix(char const* src)
+{
+    char* prefix = (char*) malloc(5*sizeof(char));
+
+    memcpy(prefix, src, 5*sizeof(char));
+
+    return prefix;
+}
+
+char* get_suffix(char const* src)
+{
+    char* suffix = (char*) malloc(10*sizeof(char));
+
+    int i = 0;
+
+    while( src[i] != '_' && i < strlen(src) ){ ++i; }
+
+    assert( i != strlen(src) );
+
+    memcpy(suffix, src+i+1, strlen(src)-i );
+
+    return suffix;
+}
+
+char* get_id(char const* src)
+{
+    char* prefix;
+    char* suffix;
+    char* id;
+
+    id = (char*) malloc(10*sizeof(char));
+
+    prefix = get_prefix(src);
+    suffix = get_suffix(src);
+
+    if( ! strcmp(prefix,"dummy") )
+    {
+        sprintf(id,"-%s",suffix);
+    } // if
+    else
+    {
+        sprintf(id,"%s",suffix);
+    } // else
+
+    free(prefix);
+    free(suffix);
+
+    return id;
+} // function: get_id
+
 void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesShow, char * pFileName, int fGateNames, int fUseReverse )
 {
     FILE * pFile;
     Abc_Obj_t * pNode, * pFanin;
     char * pSopString;
     int LevelMin, LevelMax, fHasCos, Level, i, k, fHasBdds, fCompl, Prev;
-    int Limit = 500;
+    /* int Limit = 500; */
 
     assert( Abc_NtkIsStrash(pNtk) || Abc_NtkIsLogic(pNtk) );
 
@@ -86,11 +137,11 @@ void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesSho
         return;
     }
 
-    if ( vNodes->nSize > Limit )
-    {
-        printf( "The set has more than %d nodes. DOT file is not written.\n", Limit );
-        return;
-    }
+    /* if ( vNodes->nSize > Limit ) */
+    /* { */
+    /*     printf( "The set has more than %d nodes. DOT file is not written.\n", Limit ); */
+    /*     return; */
+    /* } */
 
     // start the stream
     if ( (pFile = fopen( pFileName, "w" )) == NULL )
@@ -254,17 +305,24 @@ void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesSho
         // generate the PO nodes
         Vec_PtrForEachEntry( Abc_Obj_t *, vNodes, pNode, i )
         {
+            char* id = get_id(Abc_ObjName(pNode));
+            char* id_bi = NULL;
+
+            if( Abc_ObjIsBi(pNode) ){ id_bi = get_id(Abc_ObjName(Abc_ObjFanout0(pNode))); }
+
             if ( !Abc_ObjIsCo(pNode) )
                 continue;
             fprintf( pFile, "  Node%d [label = \"%s%s\"", 
                 pNode->Id, 
-                (Abc_ObjIsBi(pNode)? Abc_ObjName(Abc_ObjFanout0(pNode)):Abc_ObjName(pNode)), 
+                (Abc_ObjIsBi(pNode)? id_bi:id), 
                 (Abc_ObjIsBi(pNode)? "_in":"") );
             fprintf( pFile, ", shape = %s", (Abc_ObjIsBi(pNode)? "box":"invtriangle") );
             if ( pNode->fMarkB )
                 fprintf( pFile, ", style = filled" );
             fprintf( pFile, ", color = coral, fillcolor = coral" );
             fprintf( pFile, "];\n" );
+
+            free(id);
         }
         fprintf( pFile, "}" );
         fprintf( pFile, "\n" );
@@ -297,7 +355,6 @@ void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesSho
             Vec_PtrFree( vSupp ); 
 */
 
-//            fprintf( pFile, "  Node%d [label = \"%d\"", pNode->Id, pNode->Id );
             if ( Abc_NtkIsStrash(pNtk) )
                 pSopString = "";
             else if ( Abc_NtkHasMapping(pNtk) && fGateNames )
@@ -306,12 +363,15 @@ void Io_WriteDotNtk( Abc_Ntk_t * pNtk, Vec_Ptr_t * vNodes, Vec_Ptr_t * vNodesSho
                 pSopString = Abc_NtkPrintSop(Mio_GateReadSop((Mio_Gate_t *)pNode->pData));
             else
                 pSopString = Abc_NtkPrintSop((char *)pNode->pData);
-            fprintf( pFile, "  Node%d [label = \"%d\\n%s\"", pNode->Id, pNode->Id, pSopString );
-//            fprintf( pFile, "  Node%d [label = \"%d\\n%s\"", pNode->Id, 
-//                SuppSize, 
-//                pSopString );
-//
+
             char* objName = Abc_ObjName(pNode);
+
+            char* id = get_id(objName);
+
+            fprintf( pFile, "  Node%d [label = \"%s\\n%s\"", pNode->Id, id, pSopString );
+
+            free(id);
+
             if( objName != NULL && strlen(objName) > 4 )
             {
                 char* substr = (char*) malloc(5*sizeof(char));
